@@ -7,7 +7,12 @@ import { ButtonLink, TextLink } from "@/components/ui/button";
 import { Icon, IconTile } from "@/components/ui/icon";
 import { Container, Section, SectionHeader } from "@/components/ui/primitives";
 import { Reveal } from "@/components/ui/reveal";
-import { HeroVisual } from "@/components/visuals/hero-visual";
+import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
+import { AiAgentVisual } from "@/components/visuals/ai-agent-visual";
+import { AiBackdrop } from "@/components/visuals/ai-backdrop";
+import { Marquee } from "@/components/ui/marquee";
+import { TiltCard } from "@/components/ui/tilt-card";
 import { TeamAvatar } from "@/components/team/team-card";
 import { getLeadership } from "@/content/team";
 import { getProducts, productsHeading, productsIntro } from "@/content/products";
@@ -15,31 +20,37 @@ import { ProductCard } from "@/components/products/product-ui";
 import { ArticleCard, ProjectCard, ServiceCard } from "./cards";
 
 export function HomeHero() {
+  const building = getProducts().find((p) => p.status === "in-development");
   return (
     <section aria-labelledby="hero-heading" className="relative overflow-hidden bg-gradient-to-b from-mist via-white to-white">
-      <div aria-hidden="true" className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_top_left,black,transparent_70%)] opacity-70" />
-      <Container className="relative grid items-center gap-14 pt-12 pb-20 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:pt-20 lg:pb-24">
+      <AiBackdrop />
+      <Container className="relative grid items-center gap-16 pt-12 pb-12 sm:pt-16 lg:grid-cols-12 lg:gap-10 lg:pt-20">
         <div className="lg:col-span-6 xl:col-span-6">
-          <p className="eyebrow">
-            {hero.eyebrow.map((word, i) => (
-              <span key={word} className="inline-flex items-center gap-2">
-                {i > 0 && <span aria-hidden="true" className="text-cobalt-400">×</span>}
-                {word}
+          {building ? (
+            <Link
+              href={`/work/${building.slug}`}
+              className="glass group inline-flex items-center gap-2 rounded-full py-1.5 pr-3 pl-1.5 text-sm font-medium text-navy-900"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-cobalt-600 to-violet-700 px-2.5 py-0.5 text-xs font-semibold text-white">
+                <Sparkles aria-hidden="true" className="size-3" />
+                Now building
               </span>
-            ))}
-          </p>
+              {building.name}
+              <ArrowRight aria-hidden="true" className="size-4 text-cobalt-700 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          ) : (
+            <p className="eyebrow">{hero.eyebrow.join(" × ")}</p>
+          )}
           <h1
             id="hero-heading"
-            className="mt-5 text-[2.6rem] leading-[1.04] font-bold tracking-[-0.035em] xs:text-5xl sm:text-6xl xl:text-[4.25rem]"
+            className="mt-6 text-[2.6rem] leading-[1.04] font-bold tracking-[-0.035em] xs:text-5xl sm:text-6xl xl:text-[4.25rem]"
           >
             {hero.headline.map((line) => (
               <span key={line} className="block">
                 {line}{" "}
               </span>
             ))}
-            <span className="block bg-gradient-to-r from-cobalt-700 to-cobalt-500 bg-clip-text text-transparent">
-              {hero.highlight}
-            </span>
+            <span className="text-gradient-ai block pb-1">{hero.highlight}</span>
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-600">{hero.body}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -53,12 +64,28 @@ export function HomeHero() {
           <p className="mt-6 text-sm font-medium text-navy-800">{siteConfig.tagline}</p>
         </div>
         <div className="lg:col-span-6 xl:col-span-6">
-          <HeroVisual />
+          <AiAgentVisual />
         </div>
+      </Container>
+      <Container className="relative pb-14 lg:pb-16">
+        <Marquee items={capabilityMarquee} label="What we build" />
       </Container>
     </section>
   );
 }
+
+const capabilityMarquee = [
+  "AI agents",
+  "LLM applications",
+  "Knowledge search (RAG)",
+  "Workflow automation",
+  "Web applications",
+  "Mobile apps",
+  "Data pipelines",
+  "System integrations",
+  "Dashboards & analytics",
+  "Cloud & DevOps",
+];
 
 export function DifferentiatorStrip() {
   return (
@@ -91,7 +118,7 @@ export function WhatWeDo() {
           description="From the first idea to long-term growth, we help you plan, build, launch, and improve the software your business depends on."
           action={<TextLink href="/services">View all services</TextLink>}
         />
-        <Reveal>
+        <Reveal stagger>
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {getServices().map((service) => (
               <li key={service.slug}>
@@ -116,11 +143,13 @@ export function ProductsShowcase() {
           description={`${productsIntro} See the AI products we're building in-house — what each one does, and exactly where it stands.`}
           action={<TextLink href="/work#products">See our products</TextLink>}
         />
-        <Reveal>
+        <Reveal stagger>
           <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {getProducts().map((product) => (
               <li key={product.slug}>
-                <ProductCard product={product} />
+                <TiltCard className="rounded-2xl">
+                  <ProductCard product={product} />
+                </TiltCard>
               </li>
             ))}
           </ul>
@@ -140,7 +169,7 @@ export function Audiences() {
           title="Built for people with something to build"
           description="Whether you're starting from a napkin sketch or scaling an established product, we meet you where you are."
         />
-        <Reveal>
+        <Reveal stagger>
           <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {audiences.map((a) => (
               <li key={a.title} className="rounded-2xl bg-white p-6 ring-1 ring-line">
@@ -167,7 +196,7 @@ export function FeaturedWork() {
           description="Alongside our own products, these illustrative concept projects show how we think through common business problems. Real client case studies will appear here once they're approved for publication."
           action={<TextLink href="/work">See all work</TextLink>}
         />
-        <Reveal>
+        <Reveal stagger>
           <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {getProjects().slice(0, 3).map((project) => (
               <li key={project.slug}>
@@ -218,7 +247,7 @@ export function FounderStory() {
   return (
     <Section labelledBy="story-heading">
       <Container>
-        <Reveal>
+        <Reveal stagger>
           <div className="grid overflow-hidden rounded-[2rem] bg-navy-900 lg:grid-cols-12">
             <div className="relative p-8 sm:p-12 lg:col-span-7">
               <p className="eyebrow text-cobalt-300">Our story</p>
@@ -316,7 +345,7 @@ export function InsightsPreview() {
           description="Straightforward guides for founders and teams planning their next piece of software."
           action={<TextLink href="/insights">Read all insights</TextLink>}
         />
-        <Reveal>
+        <Reveal stagger>
           <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {articles.map((article) => (
               <li key={article.slug}>

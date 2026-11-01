@@ -15,6 +15,7 @@ import {
   WhyUs,
 } from "@/components/sections/home";
 import { ProcessOverview, TechCapabilities } from "@/components/sections/shared";
+import { AiCore } from "@/components/visuals/ai-core";
 import { FAQAccordion } from "@/components/sections/faq";
 import { CTASection } from "@/components/sections/cta-section";
 import { TextLink } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export default function HomePage() {
       <HomeHero />
       <DifferentiatorStrip />
       <WhatWeDo />
+      <AiCore />
       <ProductsShowcase />
       <Audiences />
       <FeaturedWork />

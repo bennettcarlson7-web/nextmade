@@ -3,12 +3,12 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
- * Fades content in as it scrolls into view.
+ * Fades content in as it scrolls into view; with `stagger`, list items rise one after another.
  * Server-rendered content is fully visible. After hydration, only elements that start below
  * the fold are hidden and then revealed, so nothing above the fold flashes and no-JS visitors
  * see everything. Respects prefers-reduced-motion via CSS (see globals.css).
  */
-export function Reveal({ children, className }: { children: ReactNode; className?: string }) {
+export function Reveal({ children, className, stagger }: { children: ReactNode; className?: string; stagger?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export function Reveal({ children, className }: { children: ReactNode; className
   }, []);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={className} data-stagger={stagger || undefined}>
       {children}
     </div>
   );
