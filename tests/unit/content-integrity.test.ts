@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getTeam, initialsOf } from "@/content/team";
 import { seedJobs, UNCONFIRMED_DETAIL } from "@/content/jobs";
-import { getProjects } from "@/content/projects";
 import { articleMeta, todayInUsPacific } from "@/content/insights/meta";
 import { brandOwnershipStatement, brandWithEntity, company, copyrightHolder, operatorName, siteConfig } from "@/lib/site-config";
 import { jobPostingJsonLd, organizationJsonLd } from "@/lib/seo";
@@ -89,9 +88,5 @@ describe("content integrity", () => {
   it("computes the U.S. Pacific date across the date line", () => {
     // 2026-10-29 06:00 in Manila is still 2026-10-28 in California.
     expect(todayInUsPacific(new Date("2026-10-28T22:00:00Z"))).toBe("2026-10-28");
-  });
-
-  it("keeps every portfolio entry labeled as a concept until verified case studies exist", () => {
-    for (const p of getProjects()) expect(p.kind).toBe("concept");
   });
 });

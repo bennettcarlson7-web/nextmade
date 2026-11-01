@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { siteConfig } from "@/lib/site-config";
 import { getServices } from "@/content/services";
-import { getProjects } from "@/content/projects";
 import { getProducts } from "@/content/products";
 import { getArticles } from "@/content/insights";
 import { getOpenJobs } from "@/lib/data/jobs";
@@ -23,7 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...staticRoutes.map((p) => entry(p, undefined, p === "/" ? 1 : p === "/contact" || p === "/services" ? 0.9 : undefined)),
     ...getServices().map((s) => entry(`/services/${s.slug}`, undefined, 0.8)),
     ...getProducts().map((p) => entry(`/work/${p.slug}`, undefined, 0.8)),
-    ...getProjects().map((p) => entry(`/work/${p.slug}`)),
     ...getArticles().map((a) => entry(`/insights/${a.slug}`, a.updatedAt ?? a.publishedAt, 0.7)),
     ...jobs.map((j) => entry(`/careers/${j.slug}`, j.updatedAt, 0.6)),
   ];

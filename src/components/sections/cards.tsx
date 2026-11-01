@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { ArrowRight, Clock } from "lucide-react";
-import type { Article, ProcessStep, Project, Service } from "@/types/content";
+import type { Article, ProcessStep, Service } from "@/types/content";
 import { formatArticleDate } from "@/content/insights";
 import { IconTile } from "@/components/ui/icon";
-import { Badge, ConceptBadge } from "@/components/ui/primitives";
-import { ProjectVisual } from "@/components/visuals/project-visual";
 import { ArticleVisual } from "@/components/visuals/article-visual";
 import { cn } from "@/lib/utils";
 
@@ -29,33 +27,6 @@ export function ServiceCard({ service, headingLevel = "h3" }: { service: Service
         Learn more
         <ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
       </span>
-    </article>
-  );
-}
-
-export function ProjectCard({ project, headingLevel = "h3" }: { project: Project; headingLevel?: "h2" | "h3" }) {
-  const Heading = headingLevel;
-  return (
-    <article className={cn(cardBase, "overflow-hidden")}>
-      <ProjectVisual variant={project.visual} className="border-b border-line" />
-      <div className="flex flex-1 flex-col p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          {project.kind === "concept" ? <ConceptBadge /> : <Badge tone="blue">Case study</Badge>}
-        </div>
-        <Heading className="mt-3 text-lg font-semibold leading-snug">
-          <Link href={`/work/${project.slug}`} className={cn(stretchedLink, "focus-visible:outline-none")}>
-            {project.title}
-          </Link>
-        </Heading>
-        <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{project.summary}</p>
-        <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Project tags">
-          {project.tags.map((t) => (
-            <li key={t}>
-              <Badge>{t}</Badge>
-            </li>
-          ))}
-        </ul>
-      </div>
     </article>
   );
 }

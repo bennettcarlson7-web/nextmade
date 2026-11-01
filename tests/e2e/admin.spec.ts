@@ -240,7 +240,7 @@ test.describe("admin: team", () => {
     await expect(page).toHaveURL(/\/admin\/team\?saved=/, { timeout: 15_000 });
 
     const row = page.getByRole("listitem").filter({ hasText: name });
-    await expect(row).toContainText("On website");
+    await expect(row).toContainText("On website", { timeout: 15_000 });
     await expect(row.locator("img")).toHaveAttribute("src", /^\/admin\/team-photo\//);
 
     // On the website, with the uploaded photo served as a JPEG.
@@ -256,9 +256,10 @@ test.describe("admin: team", () => {
     // Hidden: off the website, and its photo is no longer public.
     await page.goto("/admin/team");
     await page.getByRole("button", { name: `Hide ${name}` }).click();
-    await expect(page.getByRole("listitem").filter({ hasText: name })).toContainText("Hidden");
+    // Generous waits: saving revalidates three public pages, which is slow while the suite loads the machine.
+    await expect(page.getByRole("listitem").filter({ hasText: name })).toContainText("Hidden", { timeout: 15_000 });
     await page.goto("/about");
-    await expect(page.getByRole("article", { name })).toHaveCount(0);
+    await expect(page.getByRole("article", { name })).toHaveCount(0, { timeout: 15_000 });
     expect((await request.get(src!)).status()).toBe(404);
 
     // Deleted after confirming.

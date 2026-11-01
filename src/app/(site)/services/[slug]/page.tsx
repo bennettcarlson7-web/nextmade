@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getService, getServices } from "@/content/services";
-import { getProjects } from "@/content/projects";
 import { siteConfig } from "@/lib/site-config";
 import { JsonLd, buildMetadata, serviceJsonLd } from "@/lib/seo";
 import { ButtonLink } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Badge, CheckList, Container, Section, SectionHeader } from "@/component
 import { Reveal } from "@/components/ui/reveal";
 import { PageHero } from "@/components/sections/page-hero";
 import { FAQAccordion } from "@/components/sections/faq";
-import { ProjectCard, ServiceCard } from "@/components/sections/cards";
+import { ServiceCard } from "@/components/sections/cards";
 import { CTASection } from "@/components/sections/cta-section";
 
 // Fully prerendered from generateStaticParams; unknown slugs render the 404 page.
@@ -32,7 +31,6 @@ export default async function ServiceDetailPage({ params }: PageProps<"/services
   const service = getService(slug);
   if (!service) notFound();
 
-  const related = getProjects().filter((p) => p.relatedServices.includes(service.slug));
   const others = getServices().filter((s) => s.slug !== service.slug).slice(0, 3);
 
   return (
@@ -154,26 +152,7 @@ export default async function ServiceDetailPage({ params }: PageProps<"/services
         </Container>
       </Section>
 
-      {related.length > 0 && (
-        <Section labelledBy="related-work-heading">
-          <Container>
-            <SectionHeader
-              id="related-work-heading"
-              eyebrow="Illustrative examples"
-              title="See this approach in a concept project"
-            />
-            <ul className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {related.map((p) => (
-                <li key={p.slug}>
-                  <ProjectCard project={p} />
-                </li>
-              ))}
-            </ul>
-          </Container>
-        </Section>
-      )}
-
-      <Section tone={related.length > 0 ? "mist" : "white"} labelledBy="other-services-heading">
+      <Section labelledBy="other-services-heading">
         <Container>
           <SectionHeader id="other-services-heading" eyebrow="More services" title="Other ways we can help" />
           <ul className="mt-10 grid gap-5 md:grid-cols-3">

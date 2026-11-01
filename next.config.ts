@@ -57,6 +57,12 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  // The illustrative concept projects were retired (Nov 2026) so Work shows only real work; old links land on /work.
+  async redirects() {
+    return ["operations-dashboard", "ai-intake-follow-up-agent", "ai-ready-data-platform", "mobile-booking-platform", "ai-knowledge-assistant"].map(
+      (slug) => ({ source: `/work/${slug}`, destination: "/work", permanent: true }),
+    );
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

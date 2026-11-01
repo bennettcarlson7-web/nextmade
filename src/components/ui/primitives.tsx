@@ -85,17 +85,6 @@ export function Badge({ children, tone = "neutral" }: { children: ReactNode; ton
   );
 }
 
-/** Visible label for illustrative (non-client) portfolio work. */
-export function ConceptBadge() {
-  return (
-    <Badge tone="amber">
-      <span className="font-semibold">Illustrative concept</span>
-      <span aria-hidden="true" className="mx-1">—</span>
-      not a client project
-    </Badge>
-  );
-}
-
 export function Notice({ title, children, tone = "info" }: { title: string; children: ReactNode; tone?: "info" | "draft" }) {
   return (
     <aside

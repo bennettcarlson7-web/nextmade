@@ -5,7 +5,6 @@ import { Container, Section, SectionHeader } from "@/components/ui/primitives";
 import {
   Audiences,
   DifferentiatorStrip,
-  FeaturedWork,
   FounderStory,
   HomeHero,
   InsightsPreview,
@@ -36,7 +35,6 @@ export default function HomePage() {
       <AiCore />
       <ProductsShowcase />
       <Audiences />
-      <FeaturedWork />
       <WhyUs />
       <ProcessOverview />
       <TechCapabilities tone="mist" />

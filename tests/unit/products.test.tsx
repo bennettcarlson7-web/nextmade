@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { getProduct, getProducts, isReleased, productsHeading } from "@/content/products";
-import { getProjects } from "@/content/projects";
 import { DemoActions, ProductCard } from "@/components/products/product-ui";
 import { ProductPreview } from "@/components/products/previews";
 
@@ -9,11 +8,6 @@ describe("products content (honesty rules)", () => {
   it("lists the three products in build order", () => {
     expect(getProducts().map((p) => p.name)).toEqual(["ClientFlow AI", "CommercePilot AI", "FieldOps AI"]);
     expect(getProduct("clientflow-ai")?.milestones[0]?.title).toMatch(/inquiry → AI analysis → lead dashboard/i);
-  });
-
-  it("shares /work/<slug> with concept projects without slug collisions", () => {
-    const slugs = [...getProducts(), ...getProjects()].map((p) => p.slug);
-    expect(new Set(slugs).size).toBe(slugs.length);
   });
 
   it("says 'What We're Building' until a product is actually usable", () => {

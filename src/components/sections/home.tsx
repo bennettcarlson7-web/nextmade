@@ -1,6 +1,5 @@
 import { audiences, differentiators, hero, reasons } from "@/content/home";
 import { getServices } from "@/content/services";
-import { getProjects } from "@/content/projects";
 import { getArticles } from "@/content/insights";
 import { siteConfig } from "@/lib/site-config";
 import { ButtonLink, TextLink } from "@/components/ui/button";
@@ -17,7 +16,7 @@ import { TeamAvatar } from "@/components/team/team-card";
 import { getTeamMembers } from "@/lib/data/team";
 import { getProducts, productsHeading, productsIntro } from "@/content/products";
 import { ProductCard } from "@/components/products/product-ui";
-import { ArticleCard, ProjectCard, ServiceCard } from "./cards";
+import { ArticleCard, ServiceCard } from "./cards";
 
 export function HomeHero() {
   const building = getProducts().find((p) => p.status === "in-development");
@@ -161,7 +160,7 @@ export function ProductsShowcase() {
 
 export function Audiences() {
   return (
-    <Section tone="mist" labelledBy="audiences-heading">
+    <Section labelledBy="audiences-heading">
       <Container>
         <SectionHeader
           id="audiences-heading"
@@ -176,31 +175,6 @@ export function Audiences() {
                 <IconTile name={a.icon} />
                 <h3 className="mt-5 text-lg font-semibold">{a.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">{a.body}</p>
-              </li>
-            ))}
-          </ul>
-        </Reveal>
-      </Container>
-    </Section>
-  );
-}
-
-export function FeaturedWork() {
-  return (
-    <Section labelledBy="work-heading">
-      <Container>
-        <SectionHeader
-          id="work-heading"
-          eyebrow="Concept projects"
-          title="How we approach real problems"
-          description="Alongside our own products, these illustrative concept projects show how we think through common business problems. Real client case studies will appear here once they're approved for publication."
-          action={<TextLink href="/work">See all work</TextLink>}
-        />
-        <Reveal stagger>
-          <ul className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {getProjects().slice(0, 3).map((project) => (
-              <li key={project.slug}>
-                <ProjectCard project={project} />
               </li>
             ))}
           </ul>

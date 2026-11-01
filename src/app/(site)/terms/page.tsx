@@ -34,10 +34,11 @@ export default function TermsPage() {
         their respective owners; mentioning them does not imply affiliation or endorsement.
       </p>
 
-      <h2>Illustrative examples</h2>
+      <h2>Products in development and design previews</h2>
       <p>
-        Projects labeled &ldquo;Concept&rdquo; or &ldquo;Illustrative&rdquo; are examples created to demonstrate our
-        approach. They do not describe real clients or delivered results.
+        Products marked as in development or planned are not yet available. Screens labeled &ldquo;Design
+        preview&rdquo; and illustrations of how our products work show intended designs with fictional sample data;
+        they are not screenshots of a finished product and do not describe real customers or results.
       </p>
 
       <h2>No professional advice</h2>

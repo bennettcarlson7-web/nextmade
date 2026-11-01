@@ -27,11 +27,6 @@ const routes = [
   "/work/clientflow-ai",
   "/work/commercepilot-ai",
   "/work/fieldops-ai",
-  "/work/operations-dashboard",
-  "/work/ai-intake-follow-up-agent",
-  "/work/ai-ready-data-platform",
-  "/work/mobile-booking-platform",
-  "/work/ai-knowledge-assistant",
   "/process",
   "/about",
   "/insights",
@@ -153,7 +148,7 @@ test.describe("business facts as rendered", () => {
     }
     await expect(products.getByText(/design preview of ClientFlow AI/i)).toBeVisible();
     await expect(page.getByRole("link", { name: /view demo/i })).toHaveCount(0);
-    await expect(page.getByRole("heading", { level: 2, name: "How we'd approach common problems" })).toBeVisible();
+    await expect(page.getByText(/concept project|illustrative example/i)).toHaveCount(0);
 
     await page.getByRole("link", { name: "Explore ClientFlow AI" }).click();
     await expect(page).toHaveURL("/work/clientflow-ai");
@@ -171,11 +166,19 @@ test.describe("business facts as rendered", () => {
     await expect(page).toHaveURL("/work#products");
   });
 
-  test("concept projects are labeled as illustrative and not client work", async ({ page }) => {
-    await page.goto("/work");
-    await expect(page.getByText("not a client project")).toHaveCount(5);
-    await page.goto("/work/operations-dashboard");
-    await expect(page.getByText("Illustrative example", { exact: true })).toBeVisible();
+  test("only real work is shown: retired concept projects are gone and their old links land on /work", async ({ page, request }) => {
+    for (const path of ["/", "/work", "/services/custom-software-development"]) {
+      await page.goto(path);
+      await expect(page.getByText(/concept project|not a client project/i)).toHaveCount(0);
+    }
+    const res = await request.get("/work/operations-dashboard", { maxRedirects: 0 });
+    expect(res.status()).toBe(308);
+    expect(res.headers()["location"]).toBe("/work");
+    await page.goto("/work/ai-knowledge-assistant");
+    await expect(page).toHaveURL("/work");
+    const sitemap = await (await request.get("/sitemap.xml")).text();
+    expect(sitemap).not.toContain("/work/operations-dashboard");
+    expect(sitemap).toContain("/work/clientflow-ai");
   });
 
   test("no future-dated articles (Oct 28, 2026)", async ({ page }) => {

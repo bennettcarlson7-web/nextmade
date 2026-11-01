@@ -118,7 +118,7 @@ export const siteConfig = {
     /** Privacy Policy is in effect (owner-approved Oct 29, 2026, with retention periods). */
     privacy: { draft: false, lastUpdated: "2026-10-30" },
     /** Terms stay a draft until the governing-law state is chosen and counsel has reviewed them. */
-    terms: { draft: true, lastUpdated: "2026-10-28" },
+    terms: { draft: true, lastUpdated: "2026-10-31" },
     /** Governing-law state for the Terms page, e.g. "Delaware". `null` → shown as a draft placeholder. */
     governingLaw: null as string | null,
   },

@@ -41,28 +41,6 @@ export type Service = {
   faqs: FAQ[];
 };
 
-export type ProjectVisualVariant = "dashboard" | "booking" | "assistant";
-
-export type Project = {
-  slug: string;
-  title: string;
-  category: string;
-  /** Every entry is a concept until replaced with verified, approved client work. */
-  kind: "concept" | "case-study";
-  visual: ProjectVisualVariant;
-  tags: string[];
-  summary: string;
-  seoDescription: string;
-  scenario: string;
-  challenge: string[];
-  approach: { title: string; body: string }[];
-  solution: string[];
-  features: string[];
-  technologies: string[];
-  considerations: string[];
-  relatedServices: string[];
-};
-
 export type ProcessStep = {
   number: string;
   title: string;
