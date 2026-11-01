@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight, BarChart3, Clock, Globe, Rocket, Users, Zap, type LucideIcon } from "lucide-react";
 import { candidateFaqs, careersPerks, excludesUS, hiringSteps, workingStyle } from "@/content/jobs";
-import { getTeam } from "@/content/team";
+import { getTeamMembers } from "@/lib/data/team";
 import { getOpenJobs } from "@/lib/data/jobs";
 import { emailSubjects, getCareersEmail, mailtoHref, siteConfig } from "@/lib/site-config";
 import { buildMetadata } from "@/lib/seo";
@@ -63,7 +63,7 @@ function Heading({ id, title, intro, action }: { id: string; title: string; intr
 
 export default async function CareersPage() {
   const jobs = await getOpenJobs();
-  const team = getTeam();
+  const team = await getTeamMembers();
   const careersMail = mailtoHref(getCareersEmail(), emailSubjects.careersQuestion);
   const allOutsideUS = jobs.length > 0 && jobs.every(excludesUS);
 
@@ -101,7 +101,7 @@ export default async function CareersPage() {
                 </ul>
               </div>
               <div className="lg:col-span-6">
-                <CareersHeroVisual />
+                <CareersHeroVisual members={team} />
               </div>
             </div>
           </Narrow>
@@ -248,7 +248,7 @@ export default async function CareersPage() {
             <div className="mt-10 grid items-center gap-8 lg:grid-cols-12">
               <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:col-span-8 lg:grid-cols-5">
                 {team.map((m) => (
-                  <li key={m.name} className="text-center">
+                  <li key={m.id} className="text-center">
                     <div className="flex justify-center">
                       <TeamAvatar member={m} size="xl" round />
                     </div>

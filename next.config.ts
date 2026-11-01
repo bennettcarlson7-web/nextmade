@@ -46,6 +46,9 @@ const nextConfig: NextConfig = {
   // Node-only SMTP client used by the intake API routes; load it from node_modules instead of bundling.
   serverExternalPackages: ["nodemailer"],
   pageExtensions: ["ts", "tsx", "mdx"],
+  // Team photos are resized in the browser (640×640) but still arrive in the Server Action body; the server
+  // re-checks each one against MAX_PHOTO_BYTES in src/lib/data/team.ts.
+  experimental: { serverActions: { bodySizeLimit: "2mb" } },
   turbopack: {
     rules: {
       "*.css": {

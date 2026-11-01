@@ -1,6 +1,6 @@
 import { siteConfig } from "@/lib/site-config";
 import { buildMetadata, JsonLd, teamJsonLd } from "@/lib/seo";
-import { getTeam } from "@/content/team";
+import { getTeamMembers } from "@/lib/data/team";
 import { ButtonLink } from "@/components/ui/button";
 import { IconTile } from "@/components/ui/icon";
 import { Container, Section, SectionHeader } from "@/components/ui/primitives";
@@ -13,7 +13,7 @@ import type { IconName } from "@/types/content";
 
 export const metadata = buildMetadata({
   title: "About Us — The Team Behind NextMade",
-  description: `Meet the ${siteConfig.name} team: CEO Antonio Ortiz, CTO Ricky Lee Sprouse, and senior software engineers Renz Patdu, Parbin Parajuli, and Joseph Zhang.`,
+  description: `Meet the ${siteConfig.name} team: the leadership and engineers you work with directly, and how we approach every project.`,
   path: "/about",
 });
 
@@ -34,8 +34,8 @@ const engagementSteps = [
   { title: "Build together", body: "Regular demos, written updates, and shared access to the work as it progresses." },
 ];
 
-export default function AboutPage() {
-  const team = getTeam();
+export default async function AboutPage() {
+  const team = await getTeamMembers();
   const leadership = team.filter((m) => m.group === "leadership");
   const engineers = team.filter((m) => m.group === "engineering");
   const { leadershipNote } = siteConfig;
@@ -93,27 +93,35 @@ export default function AboutPage() {
             description="We're a small, senior-led team, so you talk directly with the people making decisions about your product and the engineers building it."
           />
 
-          <h3 className="mt-12 text-sm font-semibold tracking-wide text-slate-600 uppercase">Leadership</h3>
-          <Reveal>
-            <ul className="mt-4 grid gap-5 sm:grid-cols-2 lg:max-w-3xl">
-              {leadership.map((m) => (
-                <li key={m.name}>
-                  <TeamCard member={m} headingLevel="h3" />
-                </li>
-              ))}
-            </ul>
-          </Reveal>
+          {leadership.length > 0 && (
+            <>
+              <h3 className="mt-12 text-sm font-semibold tracking-wide text-slate-600 uppercase">Leadership</h3>
+              <Reveal stagger>
+                <ul className="mt-4 grid gap-5 sm:grid-cols-2 lg:max-w-3xl">
+                  {leadership.map((m) => (
+                    <li key={m.id}>
+                      <TeamCard member={m} headingLevel="h3" />
+                    </li>
+                  ))}
+                </ul>
+              </Reveal>
+            </>
+          )}
 
-          <h3 className="mt-10 text-sm font-semibold tracking-wide text-slate-600 uppercase">Engineering</h3>
-          <Reveal>
-            <ul className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {engineers.map((m) => (
-                <li key={m.name}>
-                  <TeamCard member={m} headingLevel="h3" />
-                </li>
-              ))}
-            </ul>
-          </Reveal>
+          {engineers.length > 0 && (
+            <>
+              <h3 className="mt-10 text-sm font-semibold tracking-wide text-slate-600 uppercase">Engineering</h3>
+              <Reveal stagger>
+                <ul className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {engineers.map((m) => (
+                    <li key={m.id}>
+                      <TeamCard member={m} headingLevel="h3" />
+                    </li>
+                  ))}
+                </ul>
+              </Reveal>
+            </>
+          )}
         </Container>
       </Section>
 

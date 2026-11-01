@@ -14,7 +14,7 @@ async function signIn(page: Page, email = ADMIN) {
 
 test.describe("admin access", () => {
   test("every admin page requires sign-in, and admin pages are never indexed", async ({ page, request }) => {
-    for (const path of ["/admin", "/admin/candidates", "/admin/roles", "/admin/roles/new"]) {
+    for (const path of ["/admin", "/admin/candidates", "/admin/roles", "/admin/roles/new", "/admin/team", "/admin/team/new"]) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/admin\/login$/);
     }
@@ -207,5 +207,65 @@ test.describe("admin: roles", () => {
     // The applicant shows up under the role.
     await page.goto(`/admin/candidates?role=${slug}`);
     await expect(page.getByRole("row", { name: /Role Flow Candidate/ })).toBeVisible();
+  });
+});
+
+test.describe("admin: team", () => {
+  // One browser at a time: both projects share the test storage, and the team list is one document.
+  test.skip(({ isMobile }) => isMobile, "desktop only");
+
+  // A real 1×1 PNG, so the browser can decode, crop, and resize it before upload.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
+
+  test("add a member with a photo, show them on the website, hide them, and delete them", async ({ page, request }) => {
+    test.setTimeout(120_000);
+    const name = `E2E Member ${Date.now()}`;
+    await signIn(page);
+    await page.goto("/admin/team");
+    await expect(page.getByRole("heading", { level: 3, name: "Antonio Ortiz" })).toBeVisible();
+    await page.getByRole("link", { name: "Add team member" }).click();
+
+    await page.locator('input[name="photoFile"]').setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: png });
+    await expect(page.getByRole("img", { name: /photo preview/i })).toBeVisible();
+    await page.getByLabel(/^Full name/).fill(name);
+    await page.getByLabel(/^Job title/).fill("Product Designer");
+    await page.getByLabel(/^Focus/).fill("Product design & research");
+
+    // Saving requires confirming the person approved their profile; what was typed is kept.
+    await page.getByRole("button", { name: "Add team member" }).click();
+    await expect(page.getByText("Please confirm this person approved their profile being shown.")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByLabel(/^Full name/)).toHaveValue(name);
+    await page.getByRole("checkbox", { name: /approved their name, photo, and profile/ }).check();
+    await page.getByRole("button", { name: "Add team member" }).click();
+    await expect(page).toHaveURL(/\/admin\/team\?saved=/, { timeout: 15_000 });
+
+    const row = page.getByRole("listitem").filter({ hasText: name });
+    await expect(row).toContainText("On website");
+    await expect(row.locator("img")).toHaveAttribute("src", /^\/admin\/team-photo\//);
+
+    // On the website, with the uploaded photo served as a JPEG.
+    await page.goto("/about");
+    const card = page.getByRole("article", { name });
+    await expect(card).toBeVisible();
+    const src = await card.getByRole("img", { name: `Portrait of ${name}` }).getAttribute("src");
+    expect(src).toMatch(/^\/team-photo\//);
+    const photo = await request.get(src!);
+    expect(photo.status()).toBe(200);
+    expect(photo.headers()["content-type"]).toBe("image/jpeg");
+
+    // Hidden: off the website, and its photo is no longer public.
+    await page.goto("/admin/team");
+    await page.getByRole("button", { name: `Hide ${name}` }).click();
+    await expect(page.getByRole("listitem").filter({ hasText: name })).toContainText("Hidden");
+    await page.goto("/about");
+    await expect(page.getByRole("article", { name })).toHaveCount(0);
+    expect((await request.get(src!)).status()).toBe(404);
+
+    // Deleted after confirming.
+    await page.goto("/admin/team");
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: `Delete ${name}` }).click();
+    await expect(page).toHaveURL(/\/admin\/team\?deleted=1$/, { timeout: 15_000 });
+    await expect(page.getByRole("listitem").filter({ hasText: name })).toHaveCount(0);
   });
 });

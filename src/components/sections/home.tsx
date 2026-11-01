@@ -14,7 +14,7 @@ import { AiBackdrop } from "@/components/visuals/ai-backdrop";
 import { Marquee } from "@/components/ui/marquee";
 import { TiltCard } from "@/components/ui/tilt-card";
 import { TeamAvatar } from "@/components/team/team-card";
-import { getLeadership } from "@/content/team";
+import { getTeamMembers } from "@/lib/data/team";
 import { getProducts, productsHeading, productsIntro } from "@/content/products";
 import { ProductCard } from "@/components/products/product-ui";
 import { ArticleCard, ProjectCard, ServiceCard } from "./cards";
@@ -243,7 +243,8 @@ export function WhyUs() {
   );
 }
 
-export function FounderStory() {
+export async function FounderStory() {
+  const leadership = (await getTeamMembers()).filter((m) => m.group === "leadership");
   return (
     <Section labelledBy="story-heading">
       <Container>
@@ -275,7 +276,7 @@ export function FounderStory() {
               <div className="mt-8 border-t border-white/10 pt-8">
                 <h3 className="text-sm font-semibold tracking-wide text-cobalt-200 uppercase">Meet the people behind {siteConfig.name}</h3>
                 <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {getLeadership().map((m) => (
+                  {leadership.map((m) => (
                     <li key={m.name} className="flex items-center gap-3 rounded-xl bg-white/5 p-3 ring-1 ring-white/10">
                       <TeamAvatar member={m} size="md" />
                       <span>

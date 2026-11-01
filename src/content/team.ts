@@ -1,4 +1,7 @@
 /**
+ * Starting team, supplied by the business owner. The live team is managed in the admin area (/admin/team) and
+ * stored in the database (see src/lib/data/team.ts); these entries are only the initial data.
+ *
  * Team members, supplied by the business owner. Names and roles are exact — do not autocorrect.
  *
  * `focus` is role-based editorial microcopy describing what the role covers, not a biography.
@@ -12,9 +15,16 @@ export type TeamMember = {
   group: "leadership" | "engineering";
   /** Verified public profile (e.g. LinkedIn). Rendered only when set. */
   profileUrl: string | null;
-  /** Path to an approved real portrait in /public. Initials are shown when `null`. */
+  /** Approved portrait URL (uploaded in the admin area, or a file in /public). Initials are shown when `null`. */
   photo: string | null;
+  /** Optional short introduction, written or approved by the person. */
+  bio?: string | null;
 };
+
+export const teamGroups = [
+  { value: "leadership", label: "Leadership" },
+  { value: "engineering", label: "Engineering & team" },
+] as const;
 
 export const team: TeamMember[] = [
   {

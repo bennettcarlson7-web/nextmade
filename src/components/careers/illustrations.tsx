@@ -1,5 +1,5 @@
 import { BarChart3, Globe, Mic, PhoneOff, UserRound, Users, Video, type LucideIcon } from "lucide-react";
-import { getTeam, initialsOf } from "@/content/team";
+import { initialsOf, type TeamMember } from "@/content/team";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,8 +48,8 @@ function WindowDots() {
  * Hero: the work itself — a code editor and a release dashboard on the brand's navy, with three highlights.
  * The "online" avatars use the real team's initials.
  */
-export function CareersHeroVisual() {
-  const online = getTeam().slice(0, 4);
+export function CareersHeroVisual({ members }: { members: TeamMember[] }) {
+  const online = members.slice(0, 4);
   return (
     <div
       aria-hidden="true"

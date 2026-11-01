@@ -8,6 +8,19 @@ import { signSession, verifySession, SESSION_TTL_SECONDS } from "@/lib/admin/ses
 import { requestLoginCode, verifyLoginCode } from "@/lib/admin/login-codes";
 import { deleteCandidate, getCandidate, listCandidates, saveReview, statusOf } from "@/lib/data/candidates";
 import { readJobs, seedManagedJobs, writeJobs } from "@/lib/data/jobs";
+import {
+  adminPhoto,
+  deleteTeamPhoto,
+  photoResponse,
+  photoUrl,
+  readTeam,
+  readTeamPhoto,
+  seedManagedTeam,
+  sniffPhoto,
+  writeTeam,
+  writeTeamPhoto,
+} from "@/lib/data/team";
+import { teamMemberSchema } from "@/lib/validation/team-member";
 import { RedisSubmissionStore, submissionKeys } from "@/lib/integrations/submission-store";
 import { readIntakeEnv } from "@/lib/integrations/env";
 import type { SmtpSender } from "@/lib/integrations/email";
@@ -220,5 +233,75 @@ describe("role form", () => {
     expect(slugify("Senior Software Engineer — AI/ML")).toBe("senior-software-engineer-ai-ml");
     expect(slugify("Développeur Été!")).toBe("developpeur-ete");
     expect(uniqueSlug("Talent Recruiter", ["talent-recruiter", "talent-recruiter-2"])).toBe("talent-recruiter-3");
+  });
+});
+
+describe("team storage", () => {
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]).toString("base64");
+
+  it("starts from the five-person team, all visible, with stable ids", async () => {
+    const team = await readTeam(new LocalRedis());
+    expect(team.map((m) => m.id)).toEqual(["antonio-ortiz", "ricky-lee-sprouse", "renz-patdu", "parbin-parajuli", "joseph-zhang"]);
+    expect(team.every((m) => m.visible && m.photo === null)).toBe(true);
+    expect(seedManagedTeam()).toEqual(team);
+  });
+
+  it("saves the team and recognises real image bytes only", async () => {
+    const redis = new LocalRedis();
+    const team = seedManagedTeam();
+    team[0]!.role = "Chief Executive Officer";
+    await writeTeam(redis, team);
+    expect((await readTeam(redis))[0]?.role).toBe("Chief Executive Officer");
+    expect(sniffPhoto(Buffer.from(jpeg, "base64"))).toBe("image/jpeg");
+    expect(sniffPhoto(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d]))).toBe("image/png");
+    expect(sniffPhoto(Buffer.from("RIFF0000WEBPVP8 "))).toBe("image/webp");
+    expect(sniffPhoto(Buffer.from("<svg onload=alert(1)>"))).toBeNull();
+  });
+
+  it("serves photos publicly only for visible members, at their current version", async () => {
+    const redis = new LocalRedis();
+    const team = seedManagedTeam();
+    team[0]!.photo = photoUrl(team[0]!.id, "v1");
+    await writeTeam(redis, team);
+    await writeTeamPhoto(redis, team[0]!.id, { type: "image/jpeg", data: jpeg, version: "v1" });
+
+    const ok = await photoResponse(redis, "antonio-ortiz", "v1", "public");
+    expect(ok.status).toBe(200);
+    expect(ok.headers.get("content-type")).toBe("image/jpeg");
+    expect(ok.headers.get("cache-control")).toContain("immutable");
+    expect((await photoResponse(redis, "antonio-ortiz", "old", "public")).status).toBe(404);
+
+    team[0]!.visible = false;
+    await writeTeam(redis, team);
+    expect((await photoResponse(redis, "antonio-ortiz", "v1", "public")).status).toBe(404);
+    const admin = await photoResponse(redis, "antonio-ortiz", "v1", "admin");
+    expect(admin.status).toBe(200);
+    expect(admin.headers.get("cache-control")).toBe("private, no-store");
+    expect(adminPhoto(team[0]!.photo)).toBe("/admin/team-photo/antonio-ortiz/v1");
+
+    await deleteTeamPhoto(redis, "antonio-ortiz");
+    expect(await readTeamPhoto(redis, "antonio-ortiz")).toBeNull();
+  });
+});
+
+describe("team member form", () => {
+  const valid = { name: "Maria Santos", role: "Product Designer", focus: "Product design & research", group: "engineering", consent: "on" };
+
+  it("accepts a profile and requires the person's approval", () => {
+    expect(teamMemberSchema.parse({ ...valid, bio: "  Designs calm, clear interfaces.  ", profileUrl: "https://www.linkedin.com/in/maria" })).toMatchObject({
+      bio: "Designs calm, clear interfaces.",
+      profileUrl: "https://www.linkedin.com/in/maria",
+    });
+    expect(teamMemberSchema.parse(valid)).toMatchObject({ bio: null, profileUrl: null });
+    const missing = teamMemberSchema.safeParse({ ...valid, consent: undefined });
+    expect(missing.success).toBe(false);
+  });
+
+  it("rejects unsafe links, unknown sections, and overlong introductions", () => {
+    for (const profileUrl of ["javascript:alert(1)", "http://example.com", "https://user:pw@example.com"]) {
+      expect(teamMemberSchema.safeParse({ ...valid, profileUrl }).success, profileUrl).toBe(false);
+    }
+    expect(teamMemberSchema.safeParse({ ...valid, group: "board" }).success).toBe(false);
+    expect(teamMemberSchema.safeParse({ ...valid, bio: "x".repeat(501) }).success).toBe(false);
   });
 });

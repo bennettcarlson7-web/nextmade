@@ -10,6 +10,18 @@ import { endSession, requireAdmin, startSession } from "@/lib/admin/session";
 import { candidateStatuses, deleteCandidate, saveReview, type CandidateStatus } from "@/lib/data/candidates";
 import { JOBS_TAG, readJobs, writeJobs, type JobStatus, type ManagedJob } from "@/lib/data/jobs";
 import { createRedis, type Redis } from "@/lib/data/redis";
+import {
+  deleteTeamPhoto,
+  MAX_PHOTO_BYTES,
+  photoUrl,
+  readTeam,
+  sniffPhoto,
+  TEAM_TAG,
+  writeTeam,
+  writeTeamPhoto,
+  type PhotoType,
+} from "@/lib/data/team";
+import { teamMemberFieldErrors, teamMemberSchema, type TeamMemberErrors } from "@/lib/validation/team-member";
 import { readIntakeEnv } from "@/lib/integrations/env";
 import { clientIp } from "@/lib/integrations/http";
 import { jobPostingFieldErrors, jobPostingSchema, uniqueSlug, type JobPostingErrors } from "@/lib/validation/job-posting";
@@ -157,4 +169,104 @@ export async function setJobStatusAction(slug: string, status: JobStatus): Promi
   updateTag(JOBS_TAG);
   log({ action: status === "open" ? "reopen_job" : "withdraw_job", slug });
   refresh();
+}
+
+// ---- Team ----------------------------------------------------------------------------------------------------
+
+export type TeamFormState = { errors?: TeamMemberErrors; error?: string };
+
+/** Decodes and checks an uploaded portrait: real JPEG/PNG/WebP bytes, within the size limit. */
+function decodePhoto(base64: string): { type: PhotoType; data: string } | { error: string } {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return { error: "That photo couldn't be read. Please choose a JPEG, PNG, or WebP image." };
+  const bytes = Buffer.from(base64, "base64");
+  if (bytes.length > MAX_PHOTO_BYTES) return { error: "That photo is too large. Please choose a smaller image." };
+  const type = sniffPhoto(bytes);
+  if (!type) return { error: "Please choose a JPEG, PNG, or WebP image." };
+  return { type, data: bytes.toString("base64") };
+}
+
+export async function saveMemberAction(id: string | null, _prev: TeamFormState, form: FormData): Promise<TeamFormState> {
+  const admin = await requireAdmin();
+  const raw = Object.fromEntries([...form].filter(([k, v]) => !k.startsWith("$") && typeof v === "string")) as Record<string, string>;
+  const parsed = teamMemberSchema.safeParse(raw);
+  const upload = (raw.photo ?? "").trim();
+  const photo = upload ? decodePhoto(upload) : null;
+  const photoError = photo && "error" in photo ? photo.error : undefined;
+  if (!parsed.success || photoError) {
+    return {
+      errors: { ...(parsed.success ? {} : teamMemberFieldErrors(parsed.error)), ...(photoError ? { photo: photoError } : {}) },
+      error: "Please fix the highlighted fields.",
+    };
+  }
+  const p = parsed.data;
+
+  const redis = storage();
+  const members = await readTeam(redis);
+  const now = new Date().toISOString();
+  const existing = id ? members.find((m) => m.id === id) : undefined;
+  if (id && !existing) return { error: "This team member no longer exists." };
+  const memberId = existing?.id ?? uniqueSlug(p.name, members.map((m) => m.id));
+
+  let photoPath = existing?.photo ?? null;
+  if (photo && !("error" in photo)) {
+    const version = Date.now().toString(36);
+    await writeTeamPhoto(redis, memberId, { ...photo, version });
+    photoPath = photoUrl(memberId, version);
+  } else if (raw.removePhoto === "on") {
+    await deleteTeamPhoto(redis, memberId);
+    photoPath = null;
+  }
+
+  const content = { name: p.name, role: p.role, focus: p.focus, group: p.group, bio: p.bio, profileUrl: p.profileUrl, photo: photoPath };
+  if (existing) {
+    Object.assign(existing, content, { updatedAt: now, updatedBy: admin.email });
+  } else {
+    members.push({ id: memberId, ...content, visible: form.get("publish") === "on", updatedAt: now, updatedBy: admin.email });
+  }
+  await writeTeam(redis, members);
+  updateTag(TEAM_TAG);
+  log({ action: existing ? "update_member" : "create_member", id: memberId, photo: photo ? "uploaded" : raw.removePhoto === "on" ? "removed" : "unchanged" });
+  redirect(`/admin/team?saved=${encodeURIComponent(memberId)}`);
+}
+
+/** Moves a member up or down among the members of the same section (the order the website shows). */
+export async function moveMemberAction(id: string, direction: -1 | 1): Promise<void> {
+  await requireAdmin();
+  const redis = storage();
+  const members = await readTeam(redis);
+  const i = members.findIndex((m) => m.id === id);
+  if (i < 0) return;
+  let j = i + direction;
+  while (j >= 0 && j < members.length && members[j]!.group !== members[i]!.group) j += direction;
+  if (j < 0 || j >= members.length) return;
+  [members[i], members[j]] = [members[j]!, members[i]!];
+  await writeTeam(redis, members);
+  updateTag(TEAM_TAG);
+  log({ action: "move_member", id });
+  refresh();
+}
+
+export async function setMemberVisibleAction(id: string, visible: boolean): Promise<void> {
+  const admin = await requireAdmin();
+  const redis = storage();
+  const members = await readTeam(redis);
+  const member = members.find((m) => m.id === id);
+  if (!member) return;
+  Object.assign(member, { visible, updatedAt: new Date().toISOString(), updatedBy: admin.email });
+  await writeTeam(redis, members);
+  updateTag(TEAM_TAG);
+  log({ action: visible ? "show_member" : "hide_member", id });
+  refresh();
+}
+
+export async function deleteMemberAction(id: string): Promise<void> {
+  await requireAdmin();
+  const redis = storage();
+  const members = await readTeam(redis);
+  if (!members.some((m) => m.id === id)) return;
+  await writeTeam(redis, members.filter((m) => m.id !== id));
+  await deleteTeamPhoto(redis, id);
+  updateTag(TEAM_TAG);
+  log({ action: "delete_member", id });
+  redirect("/admin/team?deleted=1");
 }

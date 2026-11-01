@@ -43,10 +43,24 @@ were signed in. Sign-in also needs email sending (the Gmail SMTP settings) to de
 
 Changes appear on the public careers pages within seconds (no redeploy needed).
 
+## Team (`/admin/team`)
+
+- The team members shown on the **About**, **Careers** ("Meet Our Team"), and **home** pages.
+- **Add team member**: name, job title, a one-line focus, the section (Leadership or Engineering & team), and
+  optionally a short introduction (up to 500 characters) and a profile link such as LinkedIn.
+- **Photo**: upload a JPEG, PNG, or WebP. It's cropped to a square and resized to 640×640 automatically, so any
+  reasonable photo works; a head-and-shoulders shot looks best. Without a photo, the person's initials are shown.
+- You must confirm the person approved their name, photo, and profile before saving.
+- **Arrows** change the order within each section; **Hide** takes someone off the website without deleting them;
+  **Delete** removes the profile and the photo permanently.
+
+Changes appear on the website within seconds.
+
 ## How it works (for developers)
 
-- Data lives in the same Upstash Redis database as applications (`jobs:v1`, `submission:*`,
-  `submission-summary:*`, `candidate-review:*`). Locally and in tests it's `<SUBMISSIONS_DIR>/local-redis.json`.
+- Data lives in the same Upstash Redis database as applications (`jobs:v1`, `team:v1`, `team-photo:*`,
+  `submission:*`, `submission-summary:*`, `candidate-review:*`). Portraits are served from
+  `/team-photo/<id>/<version>` (a new address per upload, cached by browsers; hidden members' photos are admin-only). Locally and in tests it's `<SUBMISSIONS_DIR>/local-redis.json`.
 - Sessions: HMAC-signed, HttpOnly, `SameSite=Lax` cookie scoped to `/admin`, 8-hour expiry. Every admin page,
   Server Action, and the résumé download re-verify the session on the server.
 - Public careers pages read jobs through a cached function tagged `jobs`; admin changes call `updateTag("jobs")`.

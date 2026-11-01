@@ -12,6 +12,10 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "retain-on-failure",
+    // The homepage's ambient animation (blurred glows, the looping agent) is GPU work that headless test browsers
+    // do on the CPU; many in parallel time out. Tests check behavior, layout, and accessibility, so they run the way
+    // reduced-motion visitors see the site. tests/e2e/motion.spec.ts covers the animated version.
+    contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } },

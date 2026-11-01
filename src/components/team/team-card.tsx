@@ -23,6 +23,8 @@ export function TeamAvatar({
         alt={`Portrait of ${member.name}`}
         width={px}
         height={px}
+        // Admin uploads are resized to 640×640 before storage, so they're served as-is.
+        unoptimized={member.photo.includes("/team-photo/")}
         className={cn("object-cover", shape, dims)}
       />
     );
@@ -46,7 +48,7 @@ export function TeamAvatar({
 
 export function TeamCard({ member, headingLevel = "h3" }: { member: TeamMember; headingLevel?: "h2" | "h3" }) {
   const Heading = headingLevel;
-  const id = `team-${member.name.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+  const id = `team-${member.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
     <article aria-labelledby={id} className="flex h-full flex-col rounded-2xl bg-white p-6 ring-1 ring-line shadow-soft">
       <TeamAvatar member={member} />
@@ -54,7 +56,8 @@ export function TeamCard({ member, headingLevel = "h3" }: { member: TeamMember; 
         {member.name}
       </Heading>
       <p className="mt-0.5 text-sm font-semibold text-cobalt-700">{member.role}</p>
-      <p className="mt-3 flex-1 text-sm leading-relaxed text-slate-600">{member.focus}</p>
+      <p className={cn("mt-3 text-sm leading-relaxed text-slate-600", !member.bio && "flex-1")}>{member.focus}</p>
+      {member.bio && <p className="mt-3 flex-1 text-sm leading-relaxed whitespace-pre-line text-slate-700">{member.bio}</p>}
       {member.profileUrl && (
         <a
           href={member.profileUrl}

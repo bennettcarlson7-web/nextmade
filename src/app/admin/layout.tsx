@@ -48,6 +48,9 @@ async function AdminNav() {
       <Link href="/admin/roles" className="font-semibold hover:text-cobalt-200">
         Roles
       </Link>
+      <Link href="/admin/team" className="font-semibold hover:text-cobalt-200">
+        Team
+      </Link>
       <Link href="/" className="text-slate-300 hover:text-white">
         View site
       </Link>

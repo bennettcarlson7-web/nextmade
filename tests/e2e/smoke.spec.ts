@@ -86,16 +86,16 @@ test.describe("routes", () => {
 });
 
 test.describe("business facts as rendered", () => {
-  test("About shows the five team members in order, with initials and no photos", async ({ page }) => {
+  test("About shows the starting five team members in order, with initials until photos are uploaded", async ({ page }) => {
     await page.goto("/about");
     await expect(page.getByText(/coming soon/i)).toHaveCount(0);
+    // The team is managed in the admin area (another test may briefly add someone), so check the starting five.
     const cards = page.locator("article[aria-labelledby^='team-']");
-    await expect(cards).toHaveCount(5);
     for (const [i, [name, role]] of TEAM.entries()) {
       await expect(cards.nth(i).getByRole("heading")).toHaveText(name);
       await expect(cards.nth(i)).toContainText(role);
+      await expect(cards.nth(i).locator("img")).toHaveCount(0);
     }
-    await expect(cards.locator("img")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Discuss Your Project" })).toHaveAttribute("href", "/contact");
     await expect(page.getByRole("link", { name: "Explore Careers" })).toHaveAttribute("href", "/careers");
   });
@@ -129,7 +129,6 @@ test.describe("business facts as rendered", () => {
       const member = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name, level: 3 }) });
       await expect(member).toContainText(role);
     }
-    await expect(page.locator("main img")).toHaveCount(0);
     await page.getByRole("link", { name: "View Open Positions" }).last().click();
     await expect(page).toHaveURL(/#open-roles$/);
   });
