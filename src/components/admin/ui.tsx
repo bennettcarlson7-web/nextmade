@@ -59,5 +59,36 @@ export function EmptyState({ children }: { children: ReactNode }) {
   return <p className="rounded-2xl bg-white p-8 text-center text-slate-600 ring-1 ring-line">{children}</p>;
 }
 
+/** "Today", "Yesterday", "3 days ago", or a short date for anything older than a week. */
+export function formatAgo(iso: string, now = Date.now()): string {
+  const days = Math.floor((now - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
+export function Initials({ name, className }: { name: string; className?: string }) {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .filter((_, i, all) => i === 0 || i === all.length - 1)
+    .join("")
+    .toUpperCase();
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-cobalt-600 to-violet-700 font-semibold text-white",
+        className ?? "size-10 text-sm",
+      )}
+    >
+      {letters || "?"}
+    </span>
+  );
+}
+
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }) + " UTC";

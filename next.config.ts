@@ -65,7 +65,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
+      // Every page, except the admin résumé viewer, which the candidate page shows in a frame.
+      { source: "/:path((?!admin/candidates/[^/]+/resume/view$).*)", headers: securityHeaders },
+      // That viewer: the same protections, but it may be framed by this site's own pages (the route sets those headers).
+      { source: "/admin/candidates/:id/resume/view", headers: securityHeaders.filter((h) => h.key !== "Content-Security-Policy" && h.key !== "X-Frame-Options") },
       // Private admin area: never indexed, never cached by shared caches.
       { source: "/admin/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }, { key: "Cache-Control", value: "private, no-store" }] },
       { source: "/admin", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }, { key: "Cache-Control", value: "private, no-store" }] },

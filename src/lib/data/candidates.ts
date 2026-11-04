@@ -85,3 +85,38 @@ export async function deleteCandidate(redis: Redis, id: string): Promise<void> {
     ["ZREM", submissionKeys.index(KIND), id],
   ]);
 }
+
+// ---- Filtering (shared by the list and the detail page's previous/next navigation) -------------------------
+
+export type CandidateFilter = { role: string; status: CandidateStatus | ""; q: string };
+type Params = Record<string, string | string[] | undefined>;
+
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+const text = (v: unknown) => (typeof v === "string" ? v : "");
+
+export function parseCandidateFilter(params: Params): CandidateFilter {
+  const status = one(params.status);
+  return {
+    role: one(params.role).slice(0, 100),
+    status: candidateStatuses.some((s) => s.value === status) ? (status as CandidateStatus) : "",
+    q: one(params.q).trim().toLowerCase().slice(0, 100),
+  };
+}
+
+/** Query string for a filter (empty values dropped), e.g. "?status=new&q=lagos". */
+export function filterQuery(f: Partial<CandidateFilter>): string {
+  const sp = new URLSearchParams();
+  for (const [k, v] of Object.entries(f)) if (v) sp.set(k, v);
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+export function filterCandidates(list: Candidate[], f: CandidateFilter): Candidate[] {
+  return list.filter((c) => {
+    if (f.role && text(c.data.role) !== f.role) return false;
+    if (f.status && statusOf(c) !== f.status) return false;
+    if (!f.q) return true;
+    const d = c.data;
+    return [d.name, d.email, d.city, d.countryName, d.roleTitle].some((v) => text(v).toLowerCase().includes(f.q));
+  });
+}

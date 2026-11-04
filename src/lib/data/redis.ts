@@ -190,13 +190,28 @@ export class LocalRedis implements Redis {
     await mkdir(path.dirname(/*turbopackIgnore: true*/ this.file), { recursive: true, mode: 0o700 });
     const tmp = `${this.file}.tmp`;
     await writeFile(/*turbopackIgnore: true*/ tmp, JSON.stringify(Object.fromEntries(this.data)), { encoding: "utf8", mode: 0o600 });
-    await rename(/*turbopackIgnore: true*/ tmp, /*turbopackIgnore: true*/ this.file);
+    // On Windows, replacing a file fails while another handle has it open (a concurrent read, antivirus, the
+    // indexer). Those locks clear within milliseconds, so retry briefly before giving up.
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename(/*turbopackIgnore: true*/ tmp, /*turbopackIgnore: true*/ this.file);
+        break;
+      } catch (err) {
+        const code = (err as { code?: string }).code;
+        if (attempt >= 10 || (code !== "EPERM" && code !== "EBUSY" && code !== "EACCES")) throw err;
+        await new Promise((r) => setTimeout(r, 20 * (attempt + 1)));
+      }
+    }
     const { mtimeMs, size } = await stat(/*turbopackIgnore: true*/ this.file);
     this.loadedVersion = `${mtimeMs}:${size}`;
   }
 }
 
-const localByFile = new Map<string, LocalRedis>();
+// One instance per file for the whole server process. Kept on globalThis because the build can bundle this module
+// more than once (pages, route handlers, Server Actions); separate copies would each have their own write queue
+// and could read and replace the file at the same time.
+const globalStore = globalThis as typeof globalThis & { __nextmadeLocalRedis?: Map<string, LocalRedis> };
+const localByFile = (globalStore.__nextmadeLocalRedis ??= new Map<string, LocalRedis>());
 
 /** Upstash when configured (production); a JSON file under SUBMISSIONS_DIR for local runs; otherwise none. */
 export function createRedis(env: IntakeEnv): Redis | undefined {

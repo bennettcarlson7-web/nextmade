@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { FileText, PlayCircle } from "lucide-react";
 import { requireAdmin } from "@/lib/admin/session";
-import { candidateStatuses, listCandidates, statusOf, type Candidate, type CandidateStatus } from "@/lib/data/candidates";
+import { candidateStatuses, filterCandidates, filterQuery, listCandidates, parseCandidateFilter, statusOf } from "@/lib/data/candidates";
 import { readJobs } from "@/lib/data/jobs";
 import { createRedis } from "@/lib/data/redis";
 import { readIntakeEnv } from "@/lib/integrations/env";
 import { cn } from "@/lib/utils";
 import { buttonClasses } from "@/components/ui/button";
-import { AdminLoading, AdminPage, EmptyState, formatDate, Pill } from "@/components/admin/ui";
+import { AdminLoading, AdminPage, EmptyState, formatAgo, formatDate, Initials, Pill } from "@/components/admin/ui";
 
 export const metadata = { title: "Candidates" };
 
@@ -20,20 +21,12 @@ export default function CandidatesPage(props: PageProps<"/admin/candidates">) {
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : "");
-const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
-
-function matches(c: Candidate, q: string) {
-  if (!q) return true;
-  const d = c.data;
-  return [d.name, d.email, d.city, d.countryName, d.roleTitle].some((v) => str(v).toLowerCase().includes(q));
-}
 
 async function Candidates({ searchParams }: PageProps<"/admin/candidates">) {
   await requireAdmin();
   const params = await searchParams;
-  const role = first(params.role);
-  const status = first(params.status) as CandidateStatus | "";
-  const q = first(params.q).trim().toLowerCase().slice(0, 100);
+  const filter = parseCandidateFilter(params);
+  const { role, status, q } = filter;
 
   const redis = createRedis(readIntakeEnv());
   if (!redis) {
@@ -45,22 +38,18 @@ async function Candidates({ searchParams }: PageProps<"/admin/candidates">) {
   }
   const [all, jobs] = await Promise.all([listCandidates(redis), readJobs(redis)]);
 
-  const byRole = all.filter((c) => !role || str(c.data.role) === role);
+  const byRole = filterCandidates(all, { role, status: "", q: "" });
   const counts = Object.fromEntries(candidateStatuses.map((s) => [s.value, byRole.filter((c) => statusOf(c) === s.value).length]));
-  const shown = byRole.filter((c) => (!status || statusOf(c) === status) && matches(c, q));
-  const href = (next: Record<string, string>) => {
-    const sp = new URLSearchParams({ ...(role && { role }), ...(status && { status }), ...(q && { q }), ...next });
-    for (const [k, v] of [...sp]) if (!v) sp.delete(k);
-    const s = sp.toString();
-    return `/admin/candidates${s ? `?${s}` : ""}`;
-  };
+  const shown = filterCandidates(all, filter);
+  const query = filterQuery(filter);
+  const href = (next: Partial<typeof filter>) => `/admin/candidates${filterQuery({ ...filter, ...next })}`;
 
   return (
     <AdminPage
       title="Candidates"
       description={`${all.length} application${all.length === 1 ? "" : "s"} saved. Applications are kept for up to 12 months, as the Privacy Policy states.`}
     >
-      {first(params.deleted) && (
+      {params.deleted && (
         <p role="status" className="mb-6 rounded-xl bg-success-50 p-4 text-sm font-medium text-success-700 ring-1 ring-success-700/20">
           The application was permanently deleted.
         </p>
@@ -68,11 +57,11 @@ async function Candidates({ searchParams }: PageProps<"/admin/candidates">) {
 
       <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
         <Link href={href({ status: "" })} aria-current={!status ? "page" : undefined} className={tab(!status)}>
-          All <span className="text-slate-500">{byRole.length}</span>
+          All <span className="text-slate-600">{byRole.length}</span>
         </Link>
         {candidateStatuses.map((s) => (
           <Link key={s.value} href={href({ status: s.value })} aria-current={status === s.value ? "page" : undefined} className={tab(status === s.value)}>
-            {s.label} <span className="text-slate-500">{counts[s.value]}</span>
+            {s.label} <span className="text-slate-600">{counts[s.value]}</span>
           </Link>
         ))}
       </nav>
@@ -109,8 +98,8 @@ async function Candidates({ searchParams }: PageProps<"/admin/candidates">) {
           <EmptyState>{all.length === 0 ? "No applications yet." : "No candidates match these filters."}</EmptyState>
         ) : (
           <div className="overflow-x-auto rounded-2xl bg-white ring-1 ring-line">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <caption className="sr-only">Candidates, newest first</caption>
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <caption className="sr-only">Candidates, newest first. Select a name to open the candidate.</caption>
               <thead className="border-b border-line bg-paper text-xs tracking-wide text-slate-600 uppercase">
                 <tr>
                   <th scope="col" className="px-4 py-3 font-semibold">Candidate</th>
@@ -123,20 +112,50 @@ async function Candidates({ searchParams }: PageProps<"/admin/candidates">) {
               <tbody className="divide-y divide-line">
                 {shown.map((c) => {
                   const s = statusOf(c);
+                  const name = str(c.data.name) || "Unnamed";
+                  const hasResume = !!(c.data.resume as { filename?: string } | undefined)?.filename;
+                  const hasVideo = !!str(c.data.videoUrl);
                   return (
-                    <tr key={c.id} className="hover:bg-mist/60">
+                    // The whole row opens the candidate: the name link stretches over it.
+                    <tr key={c.id} className={cn("relative hover:bg-mist/70", s === "new" && "bg-cobalt-50/40")}>
                       <td className="px-4 py-3">
-                        <Link href={`/admin/candidates/${c.id}`} className="font-semibold text-cobalt-700 hover:underline">
-                          {str(c.data.name) || "Unnamed"}
-                        </Link>
-                        <div className="text-slate-600">{str(c.data.email)}</div>
+                        <div className="flex items-center gap-3">
+                          <Initials name={name} className="size-9 text-xs" />
+                          <div className="min-w-0">
+                            <Link
+                              href={`/admin/candidates/${c.id}${query}`}
+                              className="font-semibold text-cobalt-700 after:absolute after:inset-0 hover:underline"
+                            >
+                              {name}
+                            </Link>
+                            <div className="truncate text-slate-600">{str(c.data.email)}</div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-3">{str(c.data.roleTitle) || str(c.data.role)}</td>
+                      <td className="px-4 py-3">
+                        <div>{str(c.data.roleTitle) || str(c.data.role)}</div>
+                        <div className="mt-0.5 flex gap-2.5 text-xs text-slate-600">
+                          {hasResume && (
+                            <span className="inline-flex items-center gap-1">
+                              <FileText aria-hidden="true" className="size-3.5" /> Résumé
+                            </span>
+                          )}
+                          {hasVideo && (
+                            <span className="inline-flex items-center gap-1">
+                              <PlayCircle aria-hidden="true" className="size-3.5" /> Video
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">{[str(c.data.city), str(c.data.countryName)].filter(Boolean).join(", ") || "—"}</td>
                       <td className="px-4 py-3">
                         <Pill tone={s}>{candidateStatuses.find((x) => x.value === s)?.label}</Pill>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">{formatDate(c.receivedAt)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                        <time dateTime={c.receivedAt} title={formatDate(c.receivedAt)}>
+                          {formatAgo(c.receivedAt)}
+                        </time>
+                      </td>
                     </tr>
                   );
                 })}

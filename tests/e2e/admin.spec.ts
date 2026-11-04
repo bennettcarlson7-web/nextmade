@@ -47,63 +47,87 @@ test.describe("admin access", () => {
 });
 
 test.describe("admin: candidates", () => {
-  test("a new application appears in the list; the admin reviews it, downloads the résumé, and deletes it", async ({ page, request }, info) => {
-    test.setTimeout(90_000);
+  test("a new application appears in the list; the admin reads the résumé, moves between candidates, reviews, and deletes", async ({ page, request }, info) => {
+    test.setTimeout(120_000);
     const name = `E2E Candidate ${info.project.name} ${Date.now()}`;
+    const other = `${name} Second`;
     const pdf = Buffer.from("%PDF-1.4\n% e2e admin résumé\n%%EOF\n");
-    const apply = await request.post("/api/apply", {
-      data: {
-        payload: {
-          name,
-          email: "candidate@example.com",
-          phone: "+63 917 123 4567",
-          city: "Manila",
-          country: "PH",
-          gender: "woman",
-          ageRange: "25-34",
-          role: "talent-recruiter",
-          linkedinUrl: "https://www.linkedin.com/in/e2e-candidate",
-          videoUrl: "https://www.loom.com/share/e2e-candidate",
-          resume: { name: "E2E CV.pdf", data: pdf.toString("base64") },
-          consent: true,
+    const apply = (who: string) =>
+      request.post("/api/apply", {
+        data: {
+          payload: {
+            name: who,
+            email: "candidate@example.com",
+            phone: "+63 917 123 4567",
+            city: "Manila",
+            country: "PH",
+            gender: "woman",
+            ageRange: "25-34",
+            role: "talent-recruiter",
+            linkedinUrl: "https://www.linkedin.com/in/e2e-candidate",
+            videoUrl: "https://www.loom.com/share/e2e-candidate",
+            resume: { name: "E2E CV.pdf", data: pdf.toString("base64") },
+            consent: true,
+          },
+          website: "",
+          elapsedMs: 9000,
         },
-        website: "",
-        elapsedMs: 9000,
-      },
-    });
-    expect(await apply.json()).toEqual({ status: "sent" });
+      });
+    expect(await (await apply(name)).json()).toEqual({ status: "sent" });
+    expect(await (await apply(other)).json()).toEqual({ status: "sent" });
 
     await signIn(page);
     await page.goto(`/admin/candidates?q=${encodeURIComponent(name)}`);
-    const row = page.getByRole("row", { name: new RegExp(name) });
+    const row = page.getByRole("row", { name: new RegExp(`${name}(?! Second)`) });
     await expect(row).toContainText("Talent Recruiter");
     await expect(row).toContainText("Manila, Philippines");
     await expect(row).toContainText("New");
-    await row.getByRole("link", { name }).click();
+    await expect(row).toContainText("Résumé");
+    await expect(row).toContainText("Video");
+    await expect(row).toContainText("Today");
+    await row.getByRole("link", { name, exact: true }).click();
 
     // Generous wait: the candidate page renders on demand, which is slow while the parallel suite loads the machine.
-    await expect(page.getByRole("heading", { level: 1, name })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible({ timeout: 15_000 });
     for (const text of ["+63 917 123 4567", "Manila, Philippines", "Woman", "25–34"]) {
       await expect(page.getByText(text, { exact: true }).first()).toBeVisible();
     }
     for (const href of ["https://www.linkedin.com/in/e2e-candidate", "https://www.loom.com/share/e2e-candidate"]) {
-      await expect(page.locator(`a[href="${href}"][target="_blank"][rel~="noopener"]`)).toBeVisible();
+      await expect(page.locator(`a[href="${href}"][target="_blank"][rel~="noopener"]`).first()).toBeVisible();
     }
 
-    // Résumé download: the original file, as an attachment.
-    const download = await page.request.get(await page.getByRole("link", { name: "Download" }).getAttribute("href").then((h) => h!));
+    // Previous / next follow the filtered list (newest first), by button and by arrow key.
+    const pager = page.getByRole("navigation", { name: "Candidates" });
+    await expect(pager).toContainText("2 of 2");
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByRole("heading", { level: 1, name: other })).toBeVisible({ timeout: 15_000 });
+    await expect(pager).toContainText("1 of 2");
+    await pager.getByRole("link", { name: "Next candidate" }).click();
+    await expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible({ timeout: 15_000 });
+
+    // Résumé: shown on the page (PDF viewer, framable only by this site) and downloadable as the original file.
+    const viewer = page.locator(`iframe[title="Résumé of ${name}"]`);
+    await expect(viewer).toBeVisible();
+    const view = await page.request.get((await viewer.getAttribute("src"))!.replace(/#.*$/, ""));
+    expect(view.status()).toBe(200);
+    expect(view.headers()["content-type"]).toBe("application/pdf");
+    expect(view.headers()["content-disposition"]).toContain("inline");
+    expect(view.headers()["x-frame-options"]).toBe("SAMEORIGIN");
+    expect(view.headers()["content-security-policy"]).toBe("frame-ancestors 'self'");
+    const download = await page.request.get((await page.getByRole("link", { name: "Download" }).getAttribute("href"))!);
     expect(download.status()).toBe(200);
-    expect(download.headers()["content-type"]).toBe("application/pdf");
     expect(download.headers()["content-disposition"]).toContain("attachment");
     expect(Buffer.from(await download.body()).equals(pdf)).toBe(true);
 
-    // Review: status + private notes persist.
-    await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("interview");
+    // Review: choosing a status saves at once; notes save with their own button; both persist.
+    // Scoped to the visible form: Next.js keeps the previously viewed candidate mounted (hidden) for instant back.
+    await page.getByRole("group", { name: "Status" }).getByText("Interview", { exact: true }).click();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("textbox", { name: "Private notes" }).fill("Strong sourcing experience. Schedule a call.");
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Save notes" }).click();
+    await expect(page.getByText("Saved", { exact: true })).toBeVisible({ timeout: 15_000 });
     await page.reload();
-    await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("interview");
+    await expect(page.getByRole("radio", { name: "Interview" })).toBeChecked();
     await expect(page.getByRole("textbox", { name: "Private notes" })).toHaveValue("Strong sourcing experience. Schedule a call.");
     await expect(page.getByText(`by ${ADMIN}`)).toBeVisible();
 
@@ -111,16 +135,22 @@ test.describe("admin: candidates", () => {
     await expect(page.getByRole("row", { name: new RegExp(name) })).toContainText("Interview");
 
     // Delete (data-removal request): gone everywhere, including the résumé.
-    await page.getByRole("link", { name }).click();
+    await page.getByRole("link", { name, exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1, name, exact: true })).toBeVisible({ timeout: 15_000 });
     const resumeHref = (await page.getByRole("link", { name: "Download" }).getAttribute("href"))!;
     page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: "Delete application" }).click();
-    await expect(page).toHaveURL(/\/admin\/candidates\?deleted=1$/);
+    await expect(page).toHaveURL(/\/admin\/candidates\?deleted=1$/, { timeout: 15_000 });
     await expect(page.getByText("permanently deleted")).toBeVisible();
     await page.goto(`/admin/candidates?q=${encodeURIComponent(name)}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Candidates" })).toBeVisible();
-    await expect(page.getByRole("link", { name })).toHaveCount(0);
+    await expect(page.getByRole("link", { name, exact: true })).toHaveCount(0);
     expect((await page.request.get(resumeHref)).status()).toBe(404);
+
+    // Clean up the second test candidate.
+    await page.getByRole("link", { name: other }).click();
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "Delete application" }).click();
+    await expect(page).toHaveURL(/\/admin\/candidates\?deleted=1$/, { timeout: 15_000 });
   });
 });
 

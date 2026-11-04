@@ -6,7 +6,18 @@ import { LocalRedis } from "@/lib/data/redis";
 import { isAdminEmail, isAdminEnabled, readAdminConfig } from "@/lib/admin/config";
 import { signSession, verifySession, SESSION_TTL_SECONDS } from "@/lib/admin/session";
 import { requestLoginCode, verifyLoginCode } from "@/lib/admin/login-codes";
-import { deleteCandidate, getCandidate, listCandidates, saveReview, statusOf } from "@/lib/data/candidates";
+import {
+  deleteCandidate,
+  filterCandidates,
+  filterQuery,
+  getCandidate,
+  listCandidates,
+  parseCandidateFilter,
+  saveReview,
+  statusOf,
+  type Candidate,
+} from "@/lib/data/candidates";
+import { formatAgo } from "@/components/admin/ui";
 import { readJobs, seedManagedJobs, writeJobs } from "@/lib/data/jobs";
 import {
   adminPhoto,
@@ -303,5 +314,40 @@ describe("team member form", () => {
     }
     expect(teamMemberSchema.safeParse({ ...valid, group: "board" }).success).toBe(false);
     expect(teamMemberSchema.safeParse({ ...valid, bio: "x".repeat(501) }).success).toBe(false);
+  });
+});
+
+describe("candidate list filters", () => {
+  const make = (id: string, data: Record<string, unknown>, status?: "interview"): Candidate => ({
+    id,
+    receivedAt: "2026-11-01T00:00:00.000Z",
+    data,
+    review: status ? { status, notes: "", updatedAt: "2026-11-02T00:00:00.000Z", updatedBy: "a@b.c" } : null,
+  });
+  const list = [
+    make("1", { name: "Sam Okafor", role: "talent-recruiter", city: "Lagos", countryName: "Nigeria" }),
+    make("2", { name: "Ana Cruz", role: "senior-data", city: "Manila" }, "interview"),
+  ];
+
+  it("parses only known statuses and trims the search", () => {
+    expect(parseCandidateFilter({ status: "interview", role: "x", q: "  LAGOS " })).toEqual({ status: "interview", role: "x", q: "lagos" });
+    expect(parseCandidateFilter({ status: "bogus" }).status).toBe("");
+    expect(filterQuery({ role: "", status: "new", q: "sam" })).toBe("?status=new&q=sam");
+    expect(filterQuery({ role: "", status: "", q: "" })).toBe("");
+  });
+
+  it("filters by role, status, and text in the same order as the list", () => {
+    expect(filterCandidates(list, { role: "", status: "", q: "" }).map((c) => c.id)).toEqual(["1", "2"]);
+    expect(filterCandidates(list, { role: "", status: "new", q: "" }).map((c) => c.id)).toEqual(["1"]);
+    expect(filterCandidates(list, { role: "senior-data", status: "", q: "" }).map((c) => c.id)).toEqual(["2"]);
+    expect(filterCandidates(list, { role: "", status: "", q: "nigeria" }).map((c) => c.id)).toEqual(["1"]);
+  });
+
+  it("shows received dates as friendly relative times", () => {
+    const now = Date.parse("2026-11-04T12:00:00Z");
+    expect(formatAgo("2026-11-04T01:00:00Z", now)).toBe("Today");
+    expect(formatAgo("2026-11-03T08:00:00Z", now)).toBe("Yesterday");
+    expect(formatAgo("2026-11-01T08:00:00Z", now)).toBe("3 days ago");
+    expect(formatAgo("2026-10-01T08:00:00Z", now)).toBe("Oct 1, 2026");
   });
 });

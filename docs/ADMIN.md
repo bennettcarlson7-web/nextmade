@@ -26,8 +26,12 @@ were signed in. Sign-in also needs email sending (the Gmail SMTP settings) to de
 
 - Every application from the careers form, newest first, with counts per status.
 - Filter by role or status; search by name, email, or location.
-- Open a candidate to see all details, download the résumé, open the LinkedIn profile and introduction video,
-  set a **status** (New → Reviewing → Interview → Offer → Hired / Not selected) and write **private notes**.
+- Click anywhere on a row to open the candidate. **PDF résumés are shown right on the page** (Word files have a
+  Download button); Email, Call, LinkedIn, and Video buttons sit at the top.
+- **Previous / Next** (arrows at the top right, or the ← and → keys) move through the list you came from, with the
+  same filters, so you can review candidates one after another.
+- Click a **status** (New → Reviewing → Interview → Offer → Hired / Not selected) and it's saved immediately;
+  **private notes** have their own Save button.
 - **Delete application** permanently removes the application, résumé, and notes — use it when a candidate asks for
   their data to be deleted (as the Privacy Policy promises).
 - Applications, résumés, and notes expire automatically after about 13 months (retention policy).
