@@ -87,7 +87,7 @@ See [.env.example](.env.example) for the full annotated list.
 | Variable | Scope | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | build | Canonical base URL override (default `https://nextmadelabs.com`) |
-| `NEXT_PUBLIC_ALLOW_INDEXING` | build | `true` to allow search engines (production only) |
+| `NEXT_PUBLIC_ALLOW_INDEXING` | build | Optional override. Indexing is automatic on the production deployment and off on previews/local; `false` turns it off everywhere |
 | `NEXT_PUBLIC_LINKEDIN_URL` / `_GITHUB_URL` / `_X_URL` | build | Footer social links (hidden when empty) |
 | `BOOKING_URL` | build (server) | Real booking link; without it, visitors are asked to request a call by email |
 | `RESEND_API_KEY` | server | **Recommended.** Sends as `notifications@nextmadelabs.com` once the domain is verified in Resend |
@@ -175,9 +175,9 @@ inquiry/application from the website" with a one-click prefilled email instead. 
 
 - Per-page metadata via `buildMetadata()`, title template, Open Graph/Twitter cards, and a generated default OG
   image (`src/app/opengraph-image.tsx`).
-- `robots.txt` disallows all crawling until both `NEXT_PUBLIC_SITE_URL` and `NEXT_PUBLIC_ALLOW_INDEXING=true` are
-  set, and every page also emits `noindex` in that state, so preview deployments are never indexed.
-- `sitemap.xml` covers all routes, services, projects, and articles.
+- On the production deployment, `robots.txt` allows crawling (except `/admin` and `/api/`) and lists the sitemap.
+  Preview deployments and local runs disallow all crawling and every page emits `noindex`, so drafts are never indexed.
+- `sitemap.xml` covers all routes, services, products, articles, and open roles.
 - JSON-LD: Organization, WebSite, BreadcrumbList, Service, Article (publisher only, no invented author), and
   FAQPage. Emitted only once a public URL is configured.
 

@@ -64,8 +64,14 @@ export const siteConfig = {
    * `NEXT_PUBLIC_SITE_URL` overrides it (e.g. for a staging host).
    */
   url: optionalUrl(process.env.NEXT_PUBLIC_SITE_URL) ?? `https://${company.domain}`,
-  /** Search indexing is opt-in so preview deployments with draft content are not indexed. */
-  allowIndexing: process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true",
+  /**
+   * Search indexing: on for the production deployment (Vercel sets VERCEL_ENV=production), off for preview
+   * deployments and local runs so draft versions never reach Google. NEXT_PUBLIC_ALLOW_INDEXING overrides it:
+   * "false" turns indexing off everywhere, "true" turns it on.
+   */
+  allowIndexing:
+    process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true" ||
+    (process.env.NEXT_PUBLIC_ALLOW_INDEXING !== "false" && (process.env.VERCEL_ENV ?? process.env.NEXT_PUBLIC_VERCEL_ENV) === "production"),
 
   contact: {
     /** Public inbox for project inquiries (owner-supplied). */

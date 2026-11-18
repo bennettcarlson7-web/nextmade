@@ -45,8 +45,9 @@ to it (details in `docs/EMAIL_SETUP.md`). **Check:** an email to each address ar
 
 ## 5. When you're ready to be found on Google
 
-Vercel → Environment Variables → `NEXT_PUBLIC_ALLOW_INDEXING=true` (Production only) → redeploy. Until then,
-`robots.txt` keeps search engines away. That's deliberate while the Terms are still a draft.
+Search indexing is on automatically for the production deployment (preview deployments stay hidden). Then submit
+`https://nextmadelabs.com/sitemap.xml` in Google Search Console. To hide the site again, set
+`NEXT_PUBLIC_ALLOW_INDEXING=false` in Vercel and redeploy.
 
 ## Still open (decisions, not setup)
 - Terms of Use: choose the governing-law state; legal review.
